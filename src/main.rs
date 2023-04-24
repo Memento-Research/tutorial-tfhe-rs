@@ -48,8 +48,6 @@ impl IntegerType {
             IntegerType::Uint8 => {
                 let config = ConfigBuilder::all_disabled().enable_default_uint8().build();
                 let text_to_print = benchmark(config, IntegerType::Uint8, 1, 1, op.clone());
-                // create path_str that will be used to create Path. The path should be something like the following:
-                // benchmarks/benchmark_u8_add.txt
                 let path = Path::new(&path_str);
                 (path, text_to_print)
             }
