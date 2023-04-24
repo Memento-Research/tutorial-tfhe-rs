@@ -1,6 +1,0 @@
-Time to generate keys: 63.652048667s
-Time to encrypt a: 5.44575ms
-Time to encrypt b: 5.515667ms
-Time to add: 17.55225975s
-Time to decrypt: 222.875µs
-Total time: 81.263164792s

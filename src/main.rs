@@ -10,37 +10,71 @@ enum IntegerType {
     Uint64,
 }
 
+#[derive(Copy, Clone)]
+enum Operation {
+    Add,
+    Sub,
+    Mul,
+}
+
+impl Operation {
+    fn get_name(self: &Self) -> String {
+        match self {
+            Operation::Add => "add",
+            Operation::Sub => "sub",
+            Operation::Mul => "mul",
+        }
+        .to_string()
+    }
+}
+
 impl IntegerType {
-    fn benchmark(self: &Self) {
+    fn get_name(self: &Self) -> String {
+        match self {
+            IntegerType::Uint8 => "u8",
+            IntegerType::Uint16 => "u16",
+            IntegerType::Uint32 => "u32",
+            IntegerType::Uint64 => "u64",
+        }
+        .to_string()
+    }
+    fn benchmark(self: &Self, op: Operation) {
+        let path_str = format!(
+            "benchmarks/benchmark_{}_{}.txt",
+            self.get_name(),
+            op.get_name()
+        );
         let (path, text_to_print) = match self {
             IntegerType::Uint8 => {
                 let config = ConfigBuilder::all_disabled().enable_default_uint8().build();
-                let text_to_print = benchmark(config, IntegerType::Uint8, 1, 1);
-                let path = Path::new("benchmarks/benchmark_u8.txt");
+                let text_to_print = benchmark(config, IntegerType::Uint8, 1, 1, op.clone());
+                // create path_str that will be used to create Path. The path should be something like the following:
+                // benchmarks/benchmark_u8_add.txt
+                let path = Path::new(&path_str);
                 (path, text_to_print)
             }
             IntegerType::Uint16 => {
                 let config = ConfigBuilder::all_disabled()
                     .enable_default_uint16()
                     .build();
-                let text_to_print = benchmark(config, IntegerType::Uint16, 1, 1);
-                let path = Path::new("benchmarks/benchmark_u16.txt");
+                let text_to_print = benchmark(config, IntegerType::Uint16, 1, 1, op);
+                let path = Path::new(&path_str);
                 (path, text_to_print)
             }
             IntegerType::Uint32 => {
                 let config = ConfigBuilder::all_disabled()
                     .enable_default_uint32()
                     .build();
-                let text_to_print = benchmark(config, IntegerType::Uint32, 1, 1);
-                let path = Path::new("benchmarks/benchmark_u32.txt");
+                let text_to_print = benchmark(config, IntegerType::Uint32, 1, 1, op);
+                let path = Path::new(&path_str);
                 (path, text_to_print)
             }
             IntegerType::Uint64 => {
                 let config = ConfigBuilder::all_disabled()
                     .enable_default_uint64()
                     .build();
-                let text_to_print = benchmark(config, IntegerType::Uint64, 1, 1);
-                let path = Path::new("benchmarks/benchmark_u64.txt");
+                let text_to_print = benchmark(config, IntegerType::Uint64, 1, 1, op);
+                let path = Path::new(&path_str);
                 (path, text_to_print)
             }
         };
@@ -57,14 +91,22 @@ impl IntegerType {
     }
 
     fn benchmark_all() {
-        IntegerType::Uint8.benchmark();
-        IntegerType::Uint16.benchmark();
-        IntegerType::Uint32.benchmark();
-        IntegerType::Uint64.benchmark();
+        for op in [Operation::Add, Operation::Sub, Operation::Mul].iter() {
+            IntegerType::Uint8.benchmark(*op);
+            IntegerType::Uint16.benchmark(*op);
+            IntegerType::Uint32.benchmark(*op);
+            IntegerType::Uint64.benchmark(*op);
+        }
     }
 }
 
-fn benchmark(config: Config, integer_type: IntegerType, clear_a: u64, clear_b: u64) -> String {
+fn benchmark(
+    config: Config,
+    integer_type: IntegerType,
+    clear_a: u64,
+    clear_b: u64,
+    op: Operation,
+) -> String {
     let mut text_to_print = String::new();
     let total_time = Instant::now();
 
@@ -87,11 +129,17 @@ fn benchmark(config: Config, integer_type: IntegerType, clear_a: u64, clear_b: u
                 .push_str(format!("Time to encrypt b: {:?}\n", time_encrypt_b.elapsed()).as_str());
 
             let time_add = Instant::now();
-            let encrypted_sum = encrypted_a + encrypted_b;
-            text_to_print.push_str(format!("Time to add: {:?}\n", time_add.elapsed()).as_str());
+            let encrypted_result: FheUint8 = match op {
+                Operation::Add => encrypted_a + encrypted_b,
+                Operation::Sub => encrypted_a - encrypted_b,
+                Operation::Mul => encrypted_a * encrypted_b,
+            };
+            text_to_print.push_str(
+                format!("Time to {:?}: {:?}\n", op.get_name(), time_add.elapsed()).as_str(),
+            );
 
             let time_decrypt = Instant::now();
-            let _decrypted_sum: u8 = encrypted_sum.decrypt(&client_key);
+            let _decrypted_result: u8 = encrypted_result.decrypt(&client_key);
             text_to_print
                 .push_str(format!("Time to decrypt: {:?}\n", time_decrypt.elapsed()).as_str());
         }
@@ -107,11 +155,17 @@ fn benchmark(config: Config, integer_type: IntegerType, clear_a: u64, clear_b: u
                 .push_str(format!("Time to encrypt b: {:?}\n", time_encrypt_b.elapsed()).as_str());
 
             let time_add = Instant::now();
-            let encrypted_sum = encrypted_a + encrypted_b;
-            text_to_print.push_str(format!("Time to add: {:?}\n", time_add.elapsed()).as_str());
+            let encrypted_result: FheUint16 = match op {
+                Operation::Add => encrypted_a + encrypted_b,
+                Operation::Sub => encrypted_a - encrypted_b,
+                Operation::Mul => encrypted_a * encrypted_b,
+            };
+            text_to_print.push_str(
+                format!("Time to {:?}: {:?}\n", op.get_name(), time_add.elapsed()).as_str(),
+            );
 
             let time_decrypt = Instant::now();
-            let _decrypted_sum: u16 = encrypted_sum.decrypt(&client_key);
+            let _decrypted_sum: u16 = encrypted_result.decrypt(&client_key);
             text_to_print
                 .push_str(format!("Time to decrypt: {:?}\n", time_decrypt.elapsed()).as_str());
         }
@@ -127,11 +181,17 @@ fn benchmark(config: Config, integer_type: IntegerType, clear_a: u64, clear_b: u
                 .push_str(format!("Time to encrypt b: {:?}\n", time_encrypt_b.elapsed()).as_str());
 
             let time_add = Instant::now();
-            let encrypted_sum = encrypted_a + encrypted_b;
-            text_to_print.push_str(format!("Time to add: {:?}\n", time_add.elapsed()).as_str());
+            let encrypted_result: FheUint32 = match op {
+                Operation::Add => encrypted_a + encrypted_b,
+                Operation::Sub => encrypted_a - encrypted_b,
+                Operation::Mul => encrypted_a * encrypted_b,
+            };
+            text_to_print.push_str(
+                format!("Time to {:?}: {:?}\n", op.get_name(), time_add.elapsed()).as_str(),
+            );
 
             let time_decrypt = Instant::now();
-            let _decrypted_sum: u32 = encrypted_sum.decrypt(&client_key);
+            let _decrypted_sum: u32 = encrypted_result.decrypt(&client_key);
             text_to_print
                 .push_str(format!("Time to decrypt: {:?}\n", time_decrypt.elapsed()).as_str());
         }
@@ -147,11 +207,17 @@ fn benchmark(config: Config, integer_type: IntegerType, clear_a: u64, clear_b: u
                 .push_str(format!("Time to encrypt b: {:?}\n", time_encrypt_b.elapsed()).as_str());
 
             let time_add = Instant::now();
-            let encrypted_sum = encrypted_a + encrypted_b;
-            text_to_print.push_str(format!("Time to add: {:?}\n", time_add.elapsed()).as_str());
+            let encrypted_result: FheUint64 = match op {
+                Operation::Add => encrypted_a + encrypted_b,
+                Operation::Sub => encrypted_a - encrypted_b,
+                Operation::Mul => encrypted_a * encrypted_b,
+            };
+            text_to_print.push_str(
+                format!("Time to {:?}: {:?}\n", op.get_name(), time_add.elapsed()).as_str(),
+            );
 
             let time_decrypt = Instant::now();
-            let _decrypted_sum: u64 = encrypted_sum.decrypt(&client_key);
+            let _decrypted_sum: u64 = encrypted_result.decrypt(&client_key);
             text_to_print
                 .push_str(format!("Time to decrypt: {:?}\n", time_decrypt.elapsed()).as_str());
         }
