@@ -1,3 +1,3 @@
 # Tutorials-TFHE-rs
 
-## Setup
+## USE IN RELEASE MODE (huge difference in performance)
